@@ -60,20 +60,25 @@ export default function PostRequestForm() {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length > 0) {
       setErrors(errs);
       return;
     }
-    addRequest(form);
+
+    const insertedId = await addRequest(form);
+    if (!insertedId) {
+      setErrors({ submit: 'Unable to post request right now. Please try again.' });
+      return;
+    }
+
     setSubmitted(true);
     setTimeout(() => setSubmitted(false), 3000);
     setForm(defaultForm);
     setTagInput('');
     setErrors({});
-    // Scroll to board
     setTimeout(() => {
       document.querySelector('#community-board')?.scrollIntoView({ behavior: 'smooth' });
     }, 400);
@@ -134,6 +139,12 @@ export default function PostRequestForm() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {errors.submit && (
+          <div className="mb-6 p-4 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/30 text-rose-700 dark:text-rose-200 text-sm">
+            {errors.submit}
+          </div>
+        )}
 
         {/* Card */}
         <motion.div
