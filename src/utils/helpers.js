@@ -1,6 +1,11 @@
 export function formatTimeAgo(timestamp) {
+  if (!timestamp) return 'some time ago';
+  const date = new Date(timestamp);
+  const timeMs = date.getTime();
+  if (isNaN(timeMs)) return 'some time ago';
+
   const now = Date.now();
-  const diff = Math.floor((now - timestamp) / 1000);
+  const diff = Math.floor((now - timeMs) / 1000);
   if (diff < 5) return 'just now';
   if (diff < 60) return `${diff}s ago`;
   const mins = Math.floor(diff / 60);

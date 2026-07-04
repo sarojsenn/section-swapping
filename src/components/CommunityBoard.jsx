@@ -233,8 +233,11 @@ export default function CommunityBoard() {
       );
     }
 
-    if (sort === 'Newest') list.sort((a, b) => b.createdAt - a.createdAt);
-    else list.sort((a, b) => a.createdAt - b.createdAt);
+    if (sort === 'Newest') {
+      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } else {
+      list.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    }
 
     return list;
   }, [requests, search, activeFilter, sort]);
