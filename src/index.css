@@ -65,3 +65,14 @@ textarea:focus-visible,
 select:focus-visible {
   outline: none;
 }
+
+/* Style native select options for proper light/dark mode display */
+select option {
+  background-color: #ffffff;
+  color: #111827;
+}
+
+.dark select option {
+  background-color: #161620;
+  color: #ffffff;
+}

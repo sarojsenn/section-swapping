@@ -50,13 +50,28 @@ function StudentCard({ request }) {
 }
 
 function MatchCard({ match, index }) {
+  const isCompleteMatch = match.matchType === 'complete';
+  const emoji = isCompleteMatch ? '🎉' : '💬';
+  const statusText = isCompleteMatch ? 'Complete Match!' : 'Partial Match';
+  const descriptionText = isCompleteMatch 
+    ? 'These two students can directly swap sections'
+    : 'Talk to adjust and make a swap that works for both';
+  
+  const headerGradient = isCompleteMatch 
+    ? 'from-indigo-500 via-purple-500 to-pink-500'
+    : 'from-amber-500 via-orange-500 to-rose-500';
+  const badgeGradient = isCompleteMatch
+    ? 'from-indigo-500 to-purple-500'
+    : 'from-amber-500 to-orange-500';
+  const badgeText = isCompleteMatch ? 'COMPLETE MATCH ✓' : 'CAN ADJUST 🔄';
+
   return (
     <motion.div
       key={match.key}
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.4, delay: index * 0.1 }}
-      className="relative p-1 rounded-2xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 shadow-xl shadow-indigo-500/20"
+      className={`relative p-1 rounded-2xl bg-gradient-to-r ${headerGradient} shadow-xl ${isCompleteMatch ? 'shadow-indigo-500/20' : 'shadow-amber-500/20'}`}
     >
       <div className="bg-white dark:bg-[#161620] rounded-xl p-4 sm:p-6">
         {/* Header */}
@@ -67,15 +82,15 @@ function MatchCard({ match, index }) {
               transition={{ repeat: Infinity, duration: 2 }}
               className="text-2xl"
             >
-              🎉
+              {emoji}
             </motion.span>
             <div>
-              <p className="font-bold text-gray-900 dark:text-white text-base">Match Found!</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500">These two students can swap sections</p>
+              <p className="font-bold text-gray-900 dark:text-white text-base">{statusText}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500">{descriptionText}</p>
             </div>
           </div>
-          <div className="px-3 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-xs font-bold shadow-lg shadow-indigo-500/30">
-            COMPATIBLE ✓
+          <div className={`px-3 py-1 rounded-full bg-gradient-to-r ${badgeGradient} text-white text-xs font-bold shadow-lg ${isCompleteMatch ? 'shadow-indigo-500/30' : 'shadow-amber-500/30'}`}>
+            {badgeText}
           </div>
         </div>
 
@@ -96,10 +111,21 @@ function MatchCard({ match, index }) {
         </div>
 
         {/* Contact hint */}
-        <div className="mt-4 pt-4 border-t border-gray-100 dark:border-white/5">
-          <p className="text-xs text-center text-gray-500 dark:text-gray-600">
-            💬 Contact each other to confirm the swap
-          </p>
+        <div className={`mt-4 pt-4 border-t ${isCompleteMatch ? 'border-gray-100 dark:border-white/5' : 'border-amber-100 dark:border-amber-500/10'}`}>
+          {isCompleteMatch ? (
+            <p className="text-xs text-center text-gray-500 dark:text-gray-600">
+              💬 Contact each other to confirm the swap
+            </p>
+          ) : (
+            <div className="text-xs text-center">
+              <p className="text-amber-700 dark:text-amber-300 font-semibold mb-1">
+                ⚠️ Partial Match - Requires discussion
+              </p>
+              <p className="text-gray-500 dark:text-gray-600">
+                Connect and discuss to find a mutually beneficial swap arrangement
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </motion.div>

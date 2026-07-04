@@ -1,7 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiSearch, FiFilter, FiInbox } from 'react-icons/fi';
 import { useSwap } from '../context/SwapContext';
+import { supabase } from '../lib/supabaseClient';
 import SwapCard from './SwapCard';
 
 const FILTERS = ['All', '3rd Semester', '5th Semester', 'Recommended for You'];
@@ -116,34 +117,101 @@ export default function CommunityBoard() {
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('All');
   const [sort, setSort] = useState('Newest');
-  const [groupLinks, setGroupLinks] = useState(() => {
-    if (typeof window === 'undefined') return INITIAL_GROUP_LINKS;
-    try {
-      const saved = window.localStorage.getItem('swapfinder_whatsapp_groups');
-      return saved ? JSON.parse(saved) : INITIAL_GROUP_LINKS;
-    } catch {
-      return INITIAL_GROUP_LINKS;
-    }
-  });
+  const [groupLinks, setGroupLinks] = useState(INITIAL_GROUP_LINKS);
   const [selectedSection, setSelectedSection] = useState(SECTION_KEYS[0]);
   const [newGroupUrl, setNewGroupUrl] = useState('');
   const [groupStatus, setGroupStatus] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  const saveGroupLink = () => {
+  // Fetch group links from Supabase
+  useEffect(() => {
+    const fetchGroupLinks = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('group_links')
+          .select('*');
+
+        if (error) {
+          console.error('Error fetching group links:', error);
+          // Fall back to localStorage
+          try {
+            const saved = localStorage.getItem('swapfinder_whatsapp_groups');
+            if (saved) setGroupLinks(JSON.parse(saved));
+          } catch (e) {
+            console.error('Error loading from localStorage:', e);
+          }
+        } else if (data && data.length > 0) {
+          // Convert array to object keyed by section
+          const linksObj = {};
+          data.forEach(row => {
+            if (row.section && row.link) {
+              linksObj[row.section] = row.link;
+            }
+          });
+          // Merge with initial links
+          const merged = { ...INITIAL_GROUP_LINKS, ...linksObj };
+          setGroupLinks(merged);
+        }
+      } catch (err) {
+        console.error('Failed to fetch group links:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGroupLinks();
+
+    // Subscribe to real-time updates
+    const subscription = supabase
+      .channel('group_links')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'group_links' }, (payload) => {
+        if (payload.new && payload.new.section && payload.new.link) {
+          setGroupLinks(prev => ({
+            ...prev,
+            [payload.new.section]: payload.new.link
+          }));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const saveGroupLink = async () => {
     const trimmed = newGroupUrl.trim();
     if (!trimmed) {
       setGroupStatus('Enter a valid WhatsApp group link.');
       return;
     }
 
-    const nextLinks = {
-      ...groupLinks,
-      [selectedSection]: trimmed,
-    };
-    setGroupLinks(nextLinks);
-    window.localStorage.setItem('swapfinder_whatsapp_groups', JSON.stringify(nextLinks));
-    setGroupStatus('Link saved!');
-    setNewGroupUrl('');
+    try {
+      // Use upsert to insert or update
+      const { data, error } = await supabase
+        .from('group_links')
+        .upsert(
+          [{ section: selectedSection, link: trimmed }],
+          { onConflict: 'section' }
+        );
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      // Update local state
+      setGroupLinks(prev => ({
+        ...prev,
+        [selectedSection]: trimmed
+      }));
+
+      setGroupStatus('Link saved and shared with all users!');
+      setNewGroupUrl('');
+    } catch (err) {
+      console.error('Error saving group link:', err);
+      setGroupStatus('Error saving link. Please try again.');
+    }
   };
 
   const availableGroupCount = SECTION_KEYS.filter(section => groupLinks[section]).length;
@@ -230,7 +298,11 @@ export default function CommunityBoard() {
                 onChange={e => setSort(e.target.value)}
                 className="w-full pl-4 pr-8 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/40 appearance-none cursor-pointer transition-all duration-200"
               >
-                {SORTS.map(s => <option key={s}>{s}</option>)}
+                {SORTS.map(s => (
+                  <option key={s} value={s} className="bg-white dark:bg-[#161620] text-gray-900 dark:text-white">
+                    {s}
+                  </option>
+                ))}
               </select>
               <FiFilter size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
             </div>
@@ -297,7 +369,9 @@ export default function CommunityBoard() {
                   className="w-full rounded-xl border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/5 px-4 py-3 text-sm text-gray-900 dark:text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 >
                   {SECTION_KEYS.map(section => (
-                    <option key={section} value={section}>{section}</option>
+                    <option key={section} value={section} className="bg-white dark:bg-[#161620] text-gray-900 dark:text-white">
+                      {section}
+                    </option>
                   ))}
                 </select>
               </div>

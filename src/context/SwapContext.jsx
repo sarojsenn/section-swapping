@@ -188,10 +188,19 @@ export function SwapProvider({ children }) {
       for (let j = i + 1; j < requests.length; j++) {
         const a = requests[i];
         const b = requests[j];
+        
+        // Check if sections match
         const aWantsB = a.wantedSections.includes(b.currentSection);
         const bWantsA = b.wantedSections.includes(a.currentSection);
-        if (aWantsB && bWantsA && (a.id === activeRequestId || b.id === activeRequestId)) {
-          result.push({ a, b, key: `${a.id}-${b.id}` });
+        
+        // Determine if at least one person's wanted sections are included (partial or complete match)
+        const hasMatch = aWantsB || bWantsA;
+        
+        // Only show if this request is involved and there's at least a partial match
+        if (hasMatch && (a.id === activeRequestId || b.id === activeRequestId)) {
+          // Determine match type
+          const matchType = aWantsB && bWantsA ? 'complete' : 'partial';
+          result.push({ a, b, key: `${a.id}-${b.id}`, matchType, aWantsB, bWantsA });
         }
       }
     }
