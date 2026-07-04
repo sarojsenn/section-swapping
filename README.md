@@ -174,8 +174,6 @@ npm run dev
 
 ## Screenshots
 
-### Home Page
-
 <h2>Home Page</h2>
 
 <p align="center">
