@@ -26,6 +26,22 @@ export default function Hero() {
         {/* LEFT */}
         <div className="flex-1 max-w-xl text-center lg:text-left">
 
+          {/* Pill badge */}
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="flex items-start gap-3 max-w-2xl px-4 py-3 rounded-xl border border-amber-200 dark:border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 mb-6"
+          >
+            <span className="mt-1 h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse" />
+            <p className="text-sm text-amber-800 dark:text-amber-200">
+            <span className="font-semibold">Notice:</span> KSwapFinder is only a platform
+              to help students find mutual section swaps. We do <strong> not </strong>
+              encourage, promote, or support exchanging money or any other form of
+              payment for section swaps.
+            </p>
+          </motion.div>
+
           {/* Heading */}
           <motion.h1
             initial={{ opacity: 0, y: 16 }}
