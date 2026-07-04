@@ -135,7 +135,7 @@ export default function PostRequestForm() {
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5" htmlFor="name">
                     Full Name <span className="text-red-500">*</span>
                   </label>
-                  <input id="name" type="text" placeholder="e.g. Rahul Sharma" value={form.name}
+                  <input id="name" type="text" placeholder="e.g. Saroj Sen" value={form.name}
                     onChange={e => { setForm(p => ({ ...p, name: e.target.value })); if (errors.name) setErrors(p => ({ ...p, name: '' })); }}
                     className={input(!!errors.name)} />
                   {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
@@ -144,7 +144,7 @@ export default function PostRequestForm() {
                   <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5" htmlFor="roll-number">
                     Roll Number <span className="text-red-500">*</span>
                   </label>
-                  <input id="roll-number" type="text" placeholder="e.g. 2305XXXX" value={form.rollNumber}
+                  <input id="roll-number" type="text" placeholder="e.g. 2405XXXX" value={form.rollNumber}
                     onChange={e => { setForm(p => ({ ...p, rollNumber: e.target.value })); if (errors.rollNumber) setErrors(p => ({ ...p, rollNumber: '' })); }}
                     className={input(!!errors.rollNumber)} />
                   {errors.rollNumber && <p className="mt-1 text-xs text-red-500">{errors.rollNumber}</p>}
