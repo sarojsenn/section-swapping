@@ -228,9 +228,9 @@ Then open a Pull Request.
 
 **Saroj Sen**
 
-GitHub: https://github.com/YOUR_USERNAME
+GitHub: https://github.com/sarojsenn
 
-LinkedIn: https://linkedin.com/in/YOUR_PROFILE
+LinkedIn: https://www.linkedin.com/in/saroj-sen-227549318/
 
 Live Website: https://section-swapping-zdyj.vercel.app/
 
@@ -241,11 +241,3 @@ Live Website: https://section-swapping-zdyj.vercel.app/
 If you found this project useful, consider giving it a ⭐ on GitHub.
 
 It helps others discover the project and motivates future improvements.
-
----
-
-<div align="center">
-
-Built for the KIIT student community ❤️
-
-</div>
