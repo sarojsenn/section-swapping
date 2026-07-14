@@ -346,7 +346,7 @@ export default function CommunityBoard() {
             <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between mb-5">
               <div className="space-y-1">
                 <p className="text-xs uppercase tracking-widest text-emerald-600 dark:text-emerald-400 font-bold">
-                  💬 WhatsApp Groups
+                  💬 WhatsApp Groups for 5th Sem only
                 </p>
                 <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">
                   Select your section to access the unofficial WhatsApp group link.

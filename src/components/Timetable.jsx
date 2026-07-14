@@ -1,10 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiCalendar, FiList, FiGrid, FiClock, FiMapPin, FiUser } from 'react-icons/fi';
+import { FiCalendar, FiList, FiGrid, FiClock, FiMapPin, FiUser, FiSearch } from 'react-icons/fi';
 import {
-  coreKeys,
-  pe1Keys,
-  pe2Keys,
+  semesters,
+  getCoreKeys,
+  getPe1Keys,
+  getPe2Keys,
+  getStudentInfo,
+  constructStudentKeys,
   groupLabel,
   electiveName,
   buildCombinedSchedule,
@@ -279,15 +282,47 @@ function WeeklyTableView({ schedule }) {
 // ─── Main Timetable Section ───────────────────────────────────────────────────
 
 export default function Timetable() {
+  const [sem, setSem] = useState(semesters[0] || 'Sem 3');
+  
+  const coreKeys = useMemo(() => getCoreKeys(sem), [sem]);
+  const pe1Keys  = useMemo(() => getPe1Keys(sem), [sem]);
+  const pe2Keys  = useMemo(() => getPe2Keys(sem), [sem]);
+
   const [coreKey, setCoreKey] = useState(coreKeys[0] ?? '');
   const [pe1Key,  setPe1Key]  = useState(pe1Keys[0]  ?? '');
   const [pe2Key,  setPe2Key]  = useState(pe2Keys[0]  ?? '');
+
+  const [rollNoInput, setRollNoInput] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    setCoreKey(prev => coreKeys.includes(prev) ? prev : (coreKeys[0] ?? ''));
+    setPe1Key(prev => pe1Keys.includes(prev) ? prev : (pe1Keys[0] ?? ''));
+    setPe2Key(prev => pe2Keys.includes(prev) ? prev : (pe2Keys[0] ?? ''));
+  }, [coreKeys, pe1Keys, pe2Keys]);
+
+  const handleRollNoSearch = (e) => {
+    e.preventDefault();
+    const student = getStudentInfo(rollNoInput.trim());
+    if (student) {
+       const keys = constructStudentKeys(student);
+       setSem('Sem 5'); // Currently dataset only supports Sem 5 roll numbers
+       setCoreKey(keys.coreKey);
+       setPe1Key(keys.pe1Key);
+       setPe2Key(keys.pe2Key);
+       setErrorMsg('');
+    } else {
+       setErrorMsg('Roll number not found. Make sure it is a valid 5th-semester roll number.');
+    }
+  };
+
   const [view,    setView]    = useState('daily');    // 'daily' | 'weekly'
   const [dayIdx,  setDayIdx]  = useState(TODAY_IDX); // 0=Mon … 4=Fri
 
-  const coreOptions = useMemo(() => coreKeys.map(k => ({ value: k, label: groupLabel(k) })), []);
-  const pe1Options  = useMemo(() => pe1Keys.map(k  => ({ value: k, label: `${electiveName(k)} — ${groupLabel(k)}` })), []);
-  const pe2Options  = useMemo(() => pe2Keys.map(k  => ({ value: k, label: `${electiveName(k)} — ${groupLabel(k)}` })), []);
+  const semOptions  = useMemo(() => semesters.map(s => ({ value: s, label: s })), []);
+  const coreOptions = useMemo(() => coreKeys.map(k => ({ value: k, label: groupLabel(k) })), [coreKeys]);
+  const pe1Options  = useMemo(() => pe1Keys.map(k  => ({ value: k, label: `${electiveName(k)} — ${groupLabel(k)}` })), [pe1Keys]);
+  const pe2Options  = useMemo(() => pe2Keys.map(k  => ({ value: k, label: `${electiveName(k)} — ${groupLabel(k)}` })), [pe2Keys]);
 
   const schedule = useMemo(
     () => buildCombinedSchedule(coreKey, pe1Key, pe2Key),
@@ -310,13 +345,13 @@ export default function Timetable() {
         >
           <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold uppercase tracking-widest mb-4">
             <FiCalendar size={12} />
-            5th Semester
+            {sem.replace('Sem ', '') + (sem === 'Sem 3' ? 'rd' : 'th')} Semester
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 dark:text-white mb-2">
             Your Timetable
           </h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Select your section and electives to see your combined weekly schedule.
+            Enter your Roll Number or select your sections to see your weekly schedule.
           </p>
         </motion.div>
 
@@ -328,39 +363,94 @@ export default function Timetable() {
           transition={{ duration: 0.4, delay: 0.1 }}
           className="bg-white dark:bg-[#1a1a1a] border border-gray-200 dark:border-white/10 rounded-xl shadow-sm p-5 sm:p-6 mb-4"
         >
+          {/* Roll Number Search */}
+          <form onSubmit={handleRollNoSearch} className="mb-6 flex flex-col sm:flex-row items-start sm:items-end gap-3 pb-6 border-b border-gray-100 dark:border-white/8">
+            <div className="flex-1 min-w-0 w-full">
+              <label htmlFor="roll-input" className="block text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2">
+                Fetch by Roll Number (5th Sem)
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <FiSearch className="text-gray-400 dark:text-gray-500" />
+                </div>
+                <input
+                  type="text"
+                  id="roll-input"
+                  value={rollNoInput}
+                  onChange={(e) => setRollNoInput(e.target.value)}
+                  placeholder="e.g. 2305231"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-white/10
+                             bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white
+                             text-sm font-semibold focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-colors"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              className="px-5 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold shadow-sm transition-colors whitespace-nowrap w-full sm:w-auto"
+            >
+              Fetch Timetable
+            </button>
+            {errorMsg && (
+              <p className="text-xs text-red-500 font-semibold absolute mt-20 sm:mt-16">{errorMsg}</p>
+            )}
+          </form>
+
+          {/* Manual Selection */}
           <div className="flex flex-col sm:flex-row gap-4">
             <TimetableSelect
-              id="core-section-select"
-              label="CSE Core Section"
-              value={coreKey}
-              onChange={setCoreKey}
-              options={coreOptions}
+              id="sem-select"
+              label="Semester"
+              value={sem}
+              onChange={setSem}
+              options={semOptions}
             />
-            <TimetableSelect
-              id="pe1-select"
-              label="Professional Elective 1 (PE-1)"
-              value={pe1Key}
-              onChange={setPe1Key}
-              options={pe1Options}
-            />
-            <TimetableSelect
-              id="pe2-select"
-              label="Professional Elective 2 (PE-2)"
-              value={pe2Key}
-              onChange={setPe2Key}
-              options={pe2Options}
-            />
+            {coreOptions.length > 0 && (
+              <TimetableSelect
+                id="core-section-select"
+                label="Core Section"
+                value={coreKey}
+                onChange={setCoreKey}
+                options={coreOptions}
+              />
+            )}
+            {pe1Options.length > 0 && (
+              <TimetableSelect
+                id="pe1-select"
+                label="Professional Elective 1 (PE-1)"
+                value={pe1Key}
+                onChange={setPe1Key}
+                options={pe1Options}
+              />
+            )}
+            {pe2Options.length > 0 && (
+              <TimetableSelect
+                id="pe2-select"
+                label="Professional Elective 2 (PE-2)"
+                value={pe2Key}
+                onChange={setPe2Key}
+                options={pe2Options}
+              />
+            )}
           </div>
 
           {/* Summary + View toggle row */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mt-5 pt-4 border-t border-gray-100 dark:border-white/8">
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Showing schedule for{' '}
-              <strong className="text-gray-800 dark:text-gray-200 font-semibold">{groupLabel(coreKey)}</strong>
-              {' + '}
-              <strong className="text-gray-800 dark:text-gray-200 font-semibold">{groupLabel(pe1Key)}</strong>
-              {' + '}
-              <strong className="text-gray-800 dark:text-gray-200 font-semibold">{groupLabel(pe2Key)}</strong>
+              {coreKey && <strong className="text-gray-800 dark:text-gray-200 font-semibold">{groupLabel(coreKey)}</strong>}
+              {pe1Key && (
+                <>
+                  {' + '}
+                  <strong className="text-gray-800 dark:text-gray-200 font-semibold">{groupLabel(pe1Key)}</strong>
+                </>
+              )}
+              {pe2Key && (
+                <>
+                  {' + '}
+                  <strong className="text-gray-800 dark:text-gray-200 font-semibold">{groupLabel(pe2Key)}</strong>
+                </>
+              )}
             </p>
 
             {/* View toggle */}

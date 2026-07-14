@@ -19,7 +19,7 @@ export default function Footer() {
         <p className="text-xs text-gray-500 dark:text-gray-600 text-center font-medium">
           Made with{' '}
           <span className="text-emerald-500 inline-block animate-pulse">❤️</span>
-          {' '}for KIIT students — swap smarter, plan better.
+          {' '}for KIIT students 
         </p>
       </div>
     </footer>

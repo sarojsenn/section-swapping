@@ -1,72 +1,52 @@
 /**
  * timetableParser.js
- * Parses the raw timetable_data.json and provides structured helpers
- * for building combined schedules from CSE Core + PE-1 + PE-2 selections.
- *
- * Data schema in timetable_data.json:
- *   {
- *     periods: [{ period, time }],
- *     groups: {
- *       [groupKey]: {
- *         Monday:    [{ period, time, subject, faculty, room }],
- *         Tuesday:   [...],
- *         Wednesday: [...],
- *         Thursday:  [...],
- *         Friday:    [...],
- *       }
- *     }
- *   }
- *
- * Group key prefixes observed:
- *   CSE Core  →  CS1…CS61, CSCE1, CSSE1, IT1, IT2
- *   PE-1      →  DOS1…DOS22, HPC1…HPC23, IPA1…IPA17, CD1…CD14, CI1…CI10, SVP1…SVP14, DMDW1…DMDW20
- *   PE-2      →  AI1, BD1, BDS1, BDS2, PSIOT1
+ * Parses the raw timetable_dataset.json and provides structured helpers
+ * for building combined schedules from Core + PE-1 + PE-2 selections.
  */
 
-import rawData from '../../data/timetable_data.json';
+import rawData from '../../data/timetable_dataset.json';
+import studentData from '../../data/Roll_wise section allocated 5th sem/student_sections.json';
 
-// ─── Classify groups ──────────────────────────────────────────────────────────
+// ─── Student Roll No Lookup ───────────────────────────────────────────────────
 
-const CORE_PREFIXES = ['CS', 'CSCE', 'CSSE', 'IT'];
-const PE1_PREFIXES  = ['HPC', 'DOS', 'AI', 'IPA', 'DSA'];
-const PE2_PREFIXES  = ['CD', 'DMDW', 'PSIOT', 'CI', 'BD', 'NIC', 'MLC', 'SVP', 'BDS'];
+export function getStudentInfo(rollNo) {
+  return studentData.students[rollNo];
+}
 
-/** Return the alphabetic prefix of a group key, e.g. 'CS44' → 'CS' */
-const prefix = (key) => key.replace(/[0-9]+$/, '');
+export function constructStudentKeys(student) {
+  if (!student) return null;
+  const coreKey = student.core ? `${student.core.branch}__${student.core.section}` : '';
+  const pe1Key = student.pe1 ? `${student.pe1.subject}-S5-PE1__${student.pe1.section}` : '';
+  const pe2Key = student.pe2 ? `${student.pe2.subject}-S5-PE2__${student.pe2.section}` : '';
+  return { coreKey, pe1Key, pe2Key };
+}
 
-const allKeys = Object.keys(rawData.groups);
+// ─── Semesters ────────────────────────────────────────────────────────────────
+export const semesters = rawData.meta.semesters; // e.g. ["Sem 3", "Sem 5"]
 
-export const coreKeys = allKeys.filter(k => CORE_PREFIXES.includes(prefix(k)));
-export const pe1Keys  = allKeys.filter(k => PE1_PREFIXES.includes(prefix(k)));
-export const pe2Keys  = allKeys.filter(k => PE2_PREFIXES.includes(prefix(k)));
+// ─── Extract Keys ─────────────────────────────────────────────────────────────
+export function getCoreKeys(sem) {
+  if (!rawData.index[sem] || !rawData.index[sem].core) return [];
+  return Object.values(rawData.index[sem].core).flat();
+}
+
+export function getPe1Keys(sem) {
+  if (!rawData.index[sem] || !rawData.index[sem].pe1) return [];
+  return Object.values(rawData.index[sem].pe1).flat();
+}
+
+export function getPe2Keys(sem) {
+  if (!rawData.index[sem] || !rawData.index[sem].pe2) return [];
+  return Object.values(rawData.index[sem].pe2).flat();
+}
 
 // ─── Human-readable labels ────────────────────────────────────────────────────
 
 /** Map an internal group key to a user-facing display label */
 export function groupLabel(key) {
-  const p = prefix(key);
-  const num = key.slice(p.length);
-  const labels = {
-    CS:    `CSE ${num}`,
-    CSCE:  `CSE (CE) ${num}`,
-    CSSE:  `CSE (SE) ${num}`,
-    IT:    `IT ${num}`,
-    DOS:   `DOS ${num}`,
-    HPC:   `HPC ${num}`,
-    IPA:   `IPA ${num}`,
-    CD:    `CD ${num}`,
-    CI:    `CI ${num}`,
-    SVP:   `SVP ${num}`,
-    DMDW:  `DMDW ${num}`,
-    AI:    `AI ${num}`,
-    BD:    `BD ${num}`,
-    BDS:   `BDS ${num}`,
-    PSIOT: `PSIOT ${num}`,
-    DSA:   `DSA ${num}`,
-    NIC:   `NIC ${num}`,
-    MLC:   `MLC ${num}`,
-  };
-  return labels[p] ?? key;
+  if (!key) return '';
+  const parts = key.split('__');
+  return parts.length > 1 ? parts[1] : key;
 }
 
 // ─── PE names ─────────────────────────────────────────────────────────────────
@@ -89,7 +69,9 @@ const PE_FULL_NAMES = {
 };
 
 export function electiveName(key) {
-  return PE_FULL_NAMES[prefix(key)] ?? prefix(key);
+  if (!key) return '';
+  const prefix = key.split('-')[0];
+  return PE_FULL_NAMES[prefix] ?? prefix;
 }
 
 // ─── Schedule merging ─────────────────────────────────────────────────────────
@@ -98,8 +80,6 @@ const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 /**
  * Build a combined weekly schedule from three group keys.
- * Returns an object keyed by day, each containing a sorted array of slots:
- *   { period, time, subject, faculty, room, source: 'core'|'pe1'|'pe2' }
  */
 export function buildCombinedSchedule(coreKey, pe1Key, pe2Key) {
   const combined = {};
@@ -109,8 +89,25 @@ export function buildCombinedSchedule(coreKey, pe1Key, pe2Key) {
 
     const addSlots = (key, source) => {
       if (!key) return;
-      const dayData = rawData.groups[key]?.[day] ?? [];
-      dayData.forEach(slot => slots.push({ ...slot, source }));
+      const sectionData = rawData.sections[key];
+      if (!sectionData || !sectionData.days || !sectionData.days[day]) return;
+      
+      const dayData = sectionData.days[day];
+      dayData.forEach(slot => {
+        const match = slot.period.match(/^(P\d+)\s*\(([^)]+)\)/);
+        const periodName = match ? match[1] : slot.period;
+        const timeStr = match ? match[2].split('-')[0].trim() : '';
+
+        slots.push({
+          period: periodName,
+          time: convertTo24Hour(timeStr),
+          subject: slot.course,
+          faculty: slot.faculty,
+          room: slot.room,
+          source: source,
+          type: slot.type
+        });
+      });
     };
 
     addSlots(coreKey, 'core');
@@ -119,8 +116,8 @@ export function buildCombinedSchedule(coreKey, pe1Key, pe2Key) {
 
     // Sort by period number
     slots.sort((a, b) => {
-      const numA = parseInt(a.period.replace('P', ''), 10);
-      const numB = parseInt(b.period.replace('P', ''), 10);
+      const numA = parseInt(a.period.replace('P', ''), 10) || 0;
+      const numB = parseInt(b.period.replace('P', ''), 10) || 0;
       return numA - numB;
     });
 
@@ -130,12 +127,25 @@ export function buildCombinedSchedule(coreKey, pe1Key, pe2Key) {
   return combined;
 }
 
+function convertTo24Hour(time12h) {
+  if (!time12h) return '';
+  const match = time12h.match(/(\d+):(\d+)\s*(AM|PM)/i);
+  if (!match) return time12h;
+  let [ , h, m, modifier ] = match;
+  h = parseInt(h, 10);
+  if (modifier.toUpperCase() === 'PM' && h < 12) h += 12;
+  if (modifier.toUpperCase() === 'AM' && h === 12) h = 0;
+  return `${h.toString().padStart(2, '0')}:${m}`;
+}
+
 /**
  * Format a period time string (24h "HH:MM") to "H:MM AM/PM"
  */
 export function formatTime(time24) {
   if (!time24) return '';
+  if (time24.includes('AM') || time24.includes('PM')) return time24;
   const [h, m] = time24.split(':').map(Number);
+  if (isNaN(h)) return time24;
   const period = h >= 12 ? 'PM' : 'AM';
   const hour   = h % 12 || 12;
   return `${hour}:${m.toString().padStart(2, '0')} ${period}`;
