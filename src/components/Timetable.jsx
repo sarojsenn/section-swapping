@@ -378,7 +378,7 @@ export default function Timetable() {
                   id="roll-input"
                   value={rollNoInput}
                   onChange={(e) => setRollNoInput(e.target.value)}
-                  placeholder="e.g. 2305231"
+                  placeholder="e.g. 240XXXXX"
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-white/10
                              bg-white dark:bg-[#1a1a1a] text-gray-900 dark:text-white
                              text-sm font-semibold focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none transition-colors"
